@@ -7,7 +7,7 @@ import { catchError, map, tap } from 'rxjs/operators';
 
 const httpOptions = {
   headers: new HttpHeaders({ 'Content-type': 'application/json' })
-}
+};
 
 @Injectable({
   providedIn: 'root'
@@ -33,18 +33,30 @@ export class HeroService {
       );
   }
 
-  private handleError<T> (operation = 'operation', result?: T) {
+  private handleError<T>(operation = 'operation', result?: T) {
     return (error: any): Observable<T> => {
       console.error(error);
       this.log(`${operation} failed: ${error.message}`);
       return of(result as T);
-    }
+    };
   }
 
   getHero(id: number): Observable<Hero> {
     const url = `${this.heroesUrl}/${id}`;
     return this.http.get<Hero>(url).pipe(
       tap(_ => this.log(`Fetched hero id=${id}`)),
+      catchError(this.handleError<Hero>(`getHero id=${id}`))
+    );
+  }
+
+  getHeroNo404<Data>(id: number): Observable<Hero> {
+    const url = `${this.heroesUrl}/?id=${id}`;
+    return this.http.get<Hero>(url).pipe(
+      map(heroes => heroes[0]),
+      tap(h => {
+        const outcome = h ? `fetched` : `did not find`;
+        this.log(`${outcome} hero id=${id}`);
+      }),
       catchError(this.handleError<Hero>(`getHero id=${id}`))
     );
   }
@@ -73,7 +85,7 @@ export class HeroService {
   }
 
   searchHeroes(term: string): Observable<Hero[]> {
-    if(!term.trim()) {
+    if (!term.trim()) {
       return of([]);
     }
     return this.http.get<Hero[]>(`${this.heroesUrl}/?name=${term}`).pipe(
